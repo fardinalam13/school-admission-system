@@ -1,4 +1,10 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.EntityFrameworkCore;
 using SchoolAdmission.Api.Configuration;
+using SchoolAdmission.Api.Data;
+using SchoolAdmission.Api.Infrastructure;
+using SchoolAdmission.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,9 +17,32 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
 
 var admissionOptions = AdmissionOptions.FromConfiguration(builder.Configuration);
 builder.Services.AddSingleton(admissionOptions);
+builder.Services.AddSingleton<ISystemClock, SystemClock>();
 
-// --- Services ----------------------------------------------------------------------------------
-builder.Services.AddControllers();
+// --- Data access -------------------------------------------------------------------------------
+builder.Services.AddDbContext<AdmissionDbContext>(options =>
+    options.UseNpgsql(connectionString));
+
+// --- Application -------------------------------------------------------------------------------
+builder.Services.AddScoped<AdmissionService>();
+builder.Services.AddHostedService<HoldExpirySweeper>();
+
+// --- Web ---------------------------------------------------------------------------------------
+builder.Services
+    .AddControllers()
+    .ConfigureApiBehaviorOptions(apiOptions =>
+    {
+        // Rule 7: bad input is always a 4xx with a readable message. Turn framework model-binding
+        // and DataAnnotations failures into the same ProblemDetails shape our own errors use.
+        apiOptions.InvalidModelStateResponseFactory = context =>
+        {
+            var problem = GlobalExceptionHandler.Problem(
+                StatusCodes.Status400BadRequest, ErrorCodes.ValidationFailed, DescribeModelError(context.ModelState));
+            return new BadRequestObjectResult(problem);
+        };
+    });
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -24,7 +53,11 @@ builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
 
 var app = builder.Build();
 
+// Create or upgrade the schema before accepting traffic. Retries while PostgreSQL is still booting.
+await DatabaseInitializer.MigrateWithRetryAsync(app.Services);
+
 // --- Pipeline ----------------------------------------------------------------------------------
+app.UseExceptionHandler();
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseCors();
@@ -36,4 +69,35 @@ app.Logger.LogInformation("Hold duration: {Seconds}s", admissionOptions.HoldDura
 app.Run();
 
 // Exposed so the integration test project can host the app in-process with WebApplicationFactory.
-public partial class Program;
+public partial class Program
+{
+    /// <summary>
+    /// Picks one human-readable sentence out of a failed ModelState. DataAnnotations messages are
+    /// used verbatim; JSON parsing and type-mismatch failures (whose raw messages mention line
+    /// numbers and parser internals) are replaced with plain wording.
+    /// </summary>
+    private static string DescribeModelError(ModelStateDictionary modelState)
+    {
+        var failed = modelState
+            .Where(kv => kv.Value is { Errors.Count: > 0 })
+            .ToList();
+
+        // System.Text.Json failures surface under "$" (whole body) or "$.field" keys. When one of
+        // those exists it is the real cause; the framework also adds a generic "request field is
+        // required" entry that would otherwise hide it, so check the JSON keys first.
+        var jsonFailure = failed.FirstOrDefault(kv => kv.Key.StartsWith('$'));
+        if (jsonFailure.Key is not null)
+        {
+            var field = jsonFailure.Key.TrimStart('$', '.');
+            return field.Length == 0
+                ? "The request body is not valid JSON."
+                : $"The value of '{field}' is not valid.";
+        }
+
+        var message = failed
+            .Select(kv => kv.Value!.Errors[0].ErrorMessage)
+            .FirstOrDefault(m => !string.IsNullOrWhiteSpace(m));
+
+        return message ?? "The request body is invalid.";
+    }
+}

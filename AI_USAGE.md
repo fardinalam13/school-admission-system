@@ -32,6 +32,11 @@ Claude Code (Anthropic), used inside VS Code.
   - *Mistake caught:* the seat-summary query projected into a record constructor and then applied
     `OrderBy`/`SingleOrDefault`, which EF Core cannot translate (500 on `GET /classes`). Caught by
     the curl smoke test; fixed by filtering/ordering before the projection.
-  - *Open at pause (2026-11-09):* smoke test still shows `heldSeats`/`confirmedSeats` always 0 and
-    a confirmed hold stored as EXPIRED; under investigation (suspect the status value-converter in
-    the `Count(...)` subqueries). Not yet resolved.
+  - *Mistake caught:* after the fix above, one smoke-test run still showed `heldSeats` and
+    `confirmedSeats` as 0 while active holds existed. A clean rebuild and a re-run with EF SQL
+    logging enabled produced correct counts and correct SQL, so the earlier run was most likely
+    executed against stale binaries. Because "could not reproduce" is not proof, the Phase 3
+    integration tests include an explicit seat-count assertion to guard this permanently.
+  - *Mistake caught:* a diagnostic command set an environment variable whose name contains dots
+    using bash `NAME=value cmd` syntax, which bash rejects, so the API silently never started and
+    every request returned HTTP 000. Fixed by using `env 'NAME=value' cmd`.

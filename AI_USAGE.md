@@ -65,6 +65,12 @@ Claude Code (Anthropic), used inside VS Code.
     returning data mid-run (connections accepted, no bytes), which made the test run look hung.
     Diagnosed by hitting the backend from inside the Docker network (worked) versus from the host
     (timed out); fixed by restarting Docker Desktop and WSL.
+- 2026-11-09 — Bonus (Phase 5). Claude added the opt-in second backend instance to compose and
+  wrote `scripts/two-instance-check.sh`.
+  - *Mistake caught:* the script's first version used `grep -v '^(201|409)$'` without `-E`, so
+    plain grep treated the alternation literally and reported every response as "other" even
+    though the real numbers (5 accepted, 55 rejected, both instances agreeing) were correct.
+    Spotted by reading the printed counts against the FAIL verdict; fixed with `grep -E`.
 - 2026-11-09 — Frontend (Phase 4). I have no prior React/Vite experience, so Claude wrote the
   React components, hooks and Vitest tests and explained each piece. Decisions I made and asked
   for: plain JavaScript instead of TypeScript, React 18.3, polling instead of WebSockets, runtime

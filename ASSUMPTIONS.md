@@ -55,6 +55,21 @@ Decisions made where the brief does not specify behaviour. Each entry states the
     PostgreSQL runs with `max_connections=200`. A burst larger than the pool queues briefly instead
     of failing, and two API instances fit comfortably within the server limit.
 
+## Bonus: two backend processes on one database
+
+11b. **How rule 1 is guaranteed across processes.** Nothing about the seat limit is kept in
+    process memory: no static counters, no in-process locks, no cache. The only arbiter is the
+    PostgreSQL row lock taken on the class inside the allocation transaction (item 9), plus the
+    partial unique index (item 10) as a backstop. Two API processes therefore behave exactly like
+    one process with more threads. This is exercised in two ways: the integration test
+    `Two_backend_instances_sharing_one_database_still_respect_the_seat_limit` starts two
+    independent API hosts against the same database, and `docker compose --profile two-instances`
+    starts a real second container on port 8081 which `scripts/two-instance-check.sh` hammers
+    together with the first.
+11c. **Second instance behind a compose profile.** The brief says a plain `docker compose up`
+    must start PostgreSQL, backend and frontend, so the extra instance is opt-in rather than
+    always on. Startup migrations from two instances are serialised by an advisory lock (item 11).
+
 ## Hold lifecycle
 
 12. **Confirm.** Only the owner (`403` otherwise), only while `HELD` and unexpired (`409`

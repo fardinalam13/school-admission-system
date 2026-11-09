@@ -99,6 +99,20 @@ share one database (see the two-instance test below). Expiry is computed by comp
 `expires_at` with the current time inside every query, so a seat becomes available the instant
 its hold expires with no job or API call involved. Details: [ASSUMPTIONS.md](ASSUMPTIONS.md).
 
+### Bonus: two backend instances on one database
+
+An optional second backend container listens on port 8081 and shares the same PostgreSQL:
+
+```bash
+docker compose --profile two-instances up -d --build
+sh scripts/two-instance-check.sh 5 60     # 5 seats, 60 simultaneous applications split across :8080 and :8081
+```
+
+The script prints how many applications were accepted and rejected and what each instance
+reports for the class; exactly 5 are accepted. The same scenario runs in the automated test
+suite as well (see below). Because the seat limit is enforced by a PostgreSQL row lock rather than
+anything in process memory, the two instances cannot disagree.
+
 ## Tests
 
 ### Backend (xUnit, real PostgreSQL via Testcontainers)

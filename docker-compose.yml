@@ -24,6 +24,7 @@ services:
 
   backend:
     build: ./backend
+    image: school-admission-backend
     environment:
       # Database connection is configurable through this variable (brief §1.2).
       ConnectionStrings__Default: Host=postgres;Port=5432;Database=admission;Username=admission;Password=admission
@@ -34,6 +35,23 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    restart: unless-stopped
+
+  # Bonus: a second backend process on another port, sharing the same database. Not started by a
+  # plain `docker compose up`; enable it with:  docker compose --profile two-instances up -d
+  backend-2:
+    image: school-admission-backend
+    profiles: ["two-instances"]
+    environment:
+      ConnectionStrings__Default: Host=postgres;Port=5432;Database=admission;Username=admission;Password=admission
+      HOLD_DURATION_SECONDS: ${HOLD_DURATION_SECONDS:-600}
+    ports:
+      - "8081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      backend:
+        condition: service_started
     restart: unless-stopped
 
   frontend:

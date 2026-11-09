@@ -173,6 +173,8 @@ backend/
 frontend/
   Dockerfile, docker/              nginx image with runtime config injection
   src/                             React app (components, hooks, api client, tests)
+scripts/
+  two-instance-check.sh            live two-backend concurrency demonstration
 docker-compose.yml
 README.md · ASSUMPTIONS.md · AI_USAGE.md
 ```

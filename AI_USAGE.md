@@ -4,7 +4,24 @@ Running log of where AI tooling was used, what it got wrong, and how the mistake
 
 ## Tool
 
-Claude Code (Anthropic), used inside VS Code.
+Claude Code (Anthropic), used inside VS Code, in a conversational pair-programming style: I set
+the requirements and the design direction, reviewed every file and every test assertion against
+the numbered rules in the brief, and ran the verification steps; Claude wrote most of the code.
+
+## Where it was used
+
+| Area | AI involvement | My involvement |
+|---|---|---|
+| Reading the brief, listing rules and ambiguities, phased plan | Drafted | Reviewed, chose the stack and the concurrency approach |
+| Backend (ASP.NET Core, EF Core, migrations, services, controllers) | Wrote the code | Reviewed design, decided assumptions (cancel semantics, id format, status codes) |
+| Backend tests (xUnit, Testcontainers, fake clock) | Wrote the tests | Checked each assertion maps to a rule in the brief |
+| Frontend (React, Vite, components, Vitest) | Wrote the code and explained React concepts | No prior React experience; decided JS over TS, React 18, polling over WebSockets |
+| Docker, compose, nginx runtime config | Wrote the files | Ran every `docker compose` verification and the browser click-through |
+| README / ASSUMPTIONS / AI_USAGE | Drafted | Edited for accuracy; every assumption is a decision I agreed to |
+
+The mistakes listed below were found by running the code (curl smoke tests, the integration
+suite, the compose rehearsal) rather than by reading it, which is why the project leans on
+automated verification at every step.
 
 ## Log
 

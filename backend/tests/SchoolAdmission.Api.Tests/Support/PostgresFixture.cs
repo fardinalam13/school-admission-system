@@ -14,6 +14,8 @@ public sealed class PostgresFixture : IAsyncLifetime
         .WithDatabase("admission_test")
         .WithUsername("admission")
         .WithPassword("admission")
+        // Same headroom as docker-compose.yml; the two-instance test opens two connection pools.
+        .WithCommand("-c", "max_connections=200")
         .Build();
 
     public string ConnectionString => _container.GetConnectionString();

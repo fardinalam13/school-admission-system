@@ -11,9 +11,10 @@ var builder = WebApplication.CreateBuilder(args);
 // --- Configuration -----------------------------------------------------------------------------
 // Database connection: environment variable ConnectionStrings__Default (standard ASP.NET Core
 // mapping to GetConnectionString("Default")). Hold duration: HOLD_DURATION_SECONDS, default 600.
-var connectionString = builder.Configuration.GetConnectionString("Default")
+var rawConnectionString = builder.Configuration.GetConnectionString("Default")
     ?? throw new InvalidOperationException(
         "Database connection string missing. Set the ConnectionStrings__Default environment variable.");
+var connectionString = ConnectionStringDefaults.Apply(rawConnectionString);
 
 var admissionOptions = AdmissionOptions.FromConfiguration(builder.Configuration);
 builder.Services.AddSingleton(admissionOptions);
@@ -58,6 +59,7 @@ await DatabaseInitializer.MigrateWithRetryAsync(app.Services);
 
 // --- Pipeline ----------------------------------------------------------------------------------
 app.UseExceptionHandler();
+app.UseMiddleware<ApiExceptionMiddleware>();
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseCors();

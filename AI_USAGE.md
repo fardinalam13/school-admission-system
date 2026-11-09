@@ -50,6 +50,21 @@ Claude Code (Anthropic), used inside VS Code.
   PostgreSQL, in-process `WebApplicationFactory`, fake clock) including the required concurrency
   test and a two-instance test for the bonus. I reviewed each assertion against the numbered rules
   in the brief before running them.
+  - *Mistake caught by the tests:* the first full run passed 25/30. The concurrency test granted
+    exactly 10 seats (correct) but 5 of the 140 rejections were `500`s, and four later tests
+    failed opening a connection. Cause: 150 simultaneous requests each hold a pooled connection
+    while queued on the class row lock, exceeding Npgsql's default pool (100) and PostgreSQL's
+    default `max_connections` (100). Fixed by bounding the pool per API instance (50) with a
+    longer pool-wait timeout (60 s) unless the connection string overrides them, raising
+    `max_connections` to 200 in compose and in the test container, and collapsing two occupancy
+    queries into one so each request holds the lock for less time.
+  - *Mistake caught:* the ASP.NET exception-handler middleware logged every expected `409` as an
+    error with a full stack trace, flooding the test output. Expected business outcomes are now
+    turned into responses by a small dedicated middleware before the framework handler sees them.
+  - *Not an application bug, but cost time:* Docker Desktop's host port forwarding stopped
+    returning data mid-run (connections accepted, no bytes), which made the test run look hung.
+    Diagnosed by hitting the backend from inside the Docker network (worked) versus from the host
+    (timed out); fixed by restarting Docker Desktop and WSL.
 - 2026-11-09 — Frontend (Phase 4). I have no prior React/Vite experience, so Claude wrote the
   React components, hooks and Vitest tests and explained each piece. Decisions I made and asked
   for: plain JavaScript instead of TypeScript, React 18.3, polling instead of WebSockets, runtime

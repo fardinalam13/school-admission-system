@@ -3,6 +3,9 @@ name: school-admission
 services:
   postgres:
     image: postgres:16-alpine
+    # Headroom for bursts of simultaneous applications and for several backend instances
+    # (each backend instance uses at most 50 pooled connections by default).
+    command: ["postgres", "-c", "max_connections=200"]
     environment:
       POSTGRES_DB: admission
       POSTGRES_USER: admission

@@ -49,6 +49,11 @@ Decisions made where the brief does not specify behaviour. Each entry states the
     into `409`, never `500`.
 11. **Migrations with several API instances.** Startup migration is wrapped in a PostgreSQL
     advisory lock so two instances starting together cannot both try to create the schema.
+11a. **Connection pool sizing for bursts.** Each application waiting on the class lock holds one
+    pooled connection. The API therefore defaults to a pool of 50 connections per instance with a
+    60 s wait for a free connection (both overridable in the connection string), and the compose
+    PostgreSQL runs with `max_connections=200`. A burst larger than the pool queues briefly instead
+    of failing, and two API instances fit comfortably within the server limit.
 
 ## Hold lifecycle
 

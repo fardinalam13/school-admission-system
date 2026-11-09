@@ -107,12 +107,18 @@ public sealed class AdmissionService(AdmissionDbContext db, ISystemClock clock, 
             .Where(h => h.ClassId == classId && h.Status == HoldStatus.Held && h.ExpiresAt <= now)
             .ExecuteUpdateAsync(set => set.SetProperty(h => h.Status, HoldStatus.Expired), ct);
 
-        // Rule 3: a student may have only one active application or confirmed admission per class.
-        var alreadyApplied = await db.Holds.AnyAsync(h =>
-            h.ClassId == classId
-            && h.StudentId == studentId
-            && (h.Status == HoldStatus.Confirmed || (h.Status == HoldStatus.Held && h.ExpiresAt > now)), ct);
+        // One round-trip for both checks below, to keep the time spent holding the lock short.
+        var occupancy = await db.Holds
+            .Where(h => h.ClassId == classId
+                        && (h.Status == HoldStatus.Confirmed || (h.Status == HoldStatus.Held && h.ExpiresAt > now)))
+            .GroupBy(_ => 1)
+            .Select(g => new { Occupied = g.Count(), Mine = g.Count(h => h.StudentId == studentId) })
+            .FirstOrDefaultAsync(ct);
 
+        var occupied = occupancy?.Occupied ?? 0;
+        var alreadyApplied = (occupancy?.Mine ?? 0) > 0;
+
+        // Rule 3: a student may have only one active application or confirmed admission per class.
         if (alreadyApplied)
         {
             throw ApiException.Conflict(ErrorCodes.DuplicateApplication,
@@ -120,10 +126,6 @@ public sealed class AdmissionService(AdmissionDbContext db, ISystemClock clock, 
         }
 
         // Rule 1: compare against the live occupancy while holding the lock.
-        var occupied = await db.Holds.CountAsync(h =>
-            h.ClassId == classId
-            && (h.Status == HoldStatus.Confirmed || (h.Status == HoldStatus.Held && h.ExpiresAt > now)), ct);
-
         if (occupied >= schoolClass.TotalSeats)
         {
             throw ApiException.Conflict(ErrorCodes.NoSeatsAvailable,

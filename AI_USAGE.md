@@ -40,3 +40,19 @@ Claude Code (Anthropic), used inside VS Code.
   - *Mistake caught:* a diagnostic command set an environment variable whose name contains dots
     using bash `NAME=value cmd` syntax, which bash rejects, so the API silently never started and
     every request returned HTTP 000. Fixed by using `env 'NAME=value' cmd`.
+  - *Mistake caught:* the first backend Dockerfile added a `HEALTHCHECK` using `curl`, but the
+    official slim `aspnet:8.0` image does not ship `curl`, so the container would have been
+    reported unhealthy forever. Removed before the image was ever built.
+  - *Mistake caught:* the test project build warned about two different EF Core assembly versions
+    (8.0.11 via the Npgsql provider, 8.0.33 via the Design package). Fixed by pinning
+    `Microsoft.EntityFrameworkCore` and `.Relational` explicitly in the API project.
+- 2026-11-09 — Tests (Phase 3). Claude wrote the xUnit integration suite (Testcontainers
+  PostgreSQL, in-process `WebApplicationFactory`, fake clock) including the required concurrency
+  test and a two-instance test for the bonus. I reviewed each assertion against the numbered rules
+  in the brief before running them.
+- 2026-11-09 — Frontend (Phase 4). I have no prior React/Vite experience, so Claude wrote the
+  React components, hooks and Vitest tests and explained each piece. Decisions I made and asked
+  for: plain JavaScript instead of TypeScript, React 18.3, polling instead of WebSockets, runtime
+  `config.js` for the backend URL instead of a build-time variable, a browser confirm dialog only
+  on cancel. The scaffold was hand-written rather than generated with `npm create vite` because
+  that tool prompts interactively.

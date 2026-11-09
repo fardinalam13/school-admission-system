@@ -70,3 +70,38 @@ Decisions made where the brief does not specify behaviour. Each entry states the
 15. **Database connection** comes from the standard ASP.NET Core variable
     `ConnectionStrings__Default`. The value in `appsettings.json` only points at a local
     development database and is overridden in `docker-compose.yml`.
+16. **Frontend backend URL is a runtime setting.** Vite normally bakes `VITE_*` variables in at
+    build time, which would force an image rebuild to change the backend address. Instead the
+    nginx container writes `/config.js` from the `API_BASE_URL` environment variable on every
+    start and the app reads `window.__APP_CONFIG__`. `VITE_API_BASE_URL` still works for local
+    `npm run dev`. *Why:* the brief asks for the URL to be changeable through an environment
+    variable, and the evaluator should not need to rebuild to do so.
+17. **The browser calls the backend directly** at `http://localhost:8080` (no reverse proxy in the
+    frontend container). That keeps the API contract exactly as the brief specifies it and keeps
+    CORS the backend's responsibility. Consequence: `API_BASE_URL` must be the address reachable
+    from the user's browser, not the compose-internal hostname.
+
+## Frontend behaviour
+
+18. **Student id lives in localStorage**, keyed per browser. There is no login, so a refresh or
+    a reopened browser restores the same student and re-fetches their applications (rule 11).
+    The input strips non-digits as you type and applications are only enabled at exactly 17 digits.
+19. **Seat counts poll every 3 seconds**, applications every 5 seconds, and polling pauses while
+    the tab is hidden. *Why:* "every few seconds" in the brief; 3 s is responsive without hammering
+    the API when thousands of parents have the page open. WebSockets/SSE were deliberately not
+    used to keep the backend contract to the eight listed endpoints.
+20. **Expiry is shown client-side first.** Each application card ticks once a second against its
+    `expiresAt`; at zero it shows *Expired* and disables *Pay admission fee* without a reload or a
+    server call (rule 9). The next poll then reflects the server's view. Clock skew between the
+    browser and server could make the switch a second or two early or late; the server remains
+    authoritative and any premature confirm attempt gets a readable `409`.
+21. **Cancel asks for confirmation** in the browser because it is irreversible and releases the
+    seat to others. Confirming (paying) does not, because a double click is harmless: the backend
+    confirm is idempotent.
+22. **Every error is shown as a sentence.** Backend error codes are mapped to friendly wording;
+    unknown codes fall back to the backend's `detail` text; a failed network call shows a
+    "cannot reach the admission server" message. Live-refresh failures keep the last good data on
+    screen and say so, instead of blanking the page (rule 12).
+23. **React 18.3 with plain JavaScript.** The brief allows JavaScript and React 18 or newer. The
+    latest React 18 line was chosen over 19 to match the wording of the brief exactly and because
+    the testing libraries used are long-stable on it.

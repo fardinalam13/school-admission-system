@@ -122,3 +122,25 @@ Decisions made where the brief does not specify behaviour. Each entry states the
 27. **React 18.3 with plain JavaScript.** The brief allows JavaScript and React 18 or newer. The
     latest React 18 line was chosen over 19 to match the wording of the brief exactly and because
     the testing libraries used are long-stable on it.
+28. **Messages belong to a screen and a student.** A success or error message is cleared when the
+    user switches tab or enters a different student id, and success messages also disappear on
+    their own after 5 seconds. When the student id changes, the previous student's application list
+    is discarded immediately, and any reply for the previous id that arrives late is ignored.
+    *Why:* without login, several family members may share one browser. One student must never see
+    another student's messages or applications, even briefly.
+
+## Scope of access and applications
+
+29. **The admin screen is visible to everyone.** The brief rules out login and says the school
+    admin and the parents both do everything from the UI. Without authentication there is no way to
+    tell an admin from a parent, and `POST /classes` is open to any caller either way, so hiding the
+    tab would only be cosmetic. It would also risk an evaluator not finding the create-class screen.
+    The tab is clearly labelled "Admin: create class". Real access control would need
+    authentication, which is out of scope.
+30. **A student may apply to, and be admitted to, several classes.** Rule 3 limits a student to one
+    active application or confirmed admission *per class*, so applications to different classes
+    are allowed. For example, a parent can hold a seat in both "Class 6 – Morning Shift" and
+    "Class 6 – Day Shift" while deciding. Limiting this further, such as one shift per grade, is not
+    possible reliably: class names are free text, so the system cannot tell which classes belong
+    to the same grade. A stricter global limit would also contradict the per-class wording of the
+    rule.

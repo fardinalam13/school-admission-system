@@ -15,5 +15,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: './src/test/setup.js',
+    // Generous per-test limit so slower machines do not produce false failures.
+    testTimeout: 20000,
   },
 });

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api } from '../api.js';
+import { useIsMounted } from '../hooks/useIsMounted.js';
 import { useNow } from '../hooks/useNow.js';
 import { formatDateTime, formatRemaining, remainingMs } from '../utils/time.js';
 
@@ -20,6 +21,9 @@ const STATUS_LABEL = {
 export default function HoldCard({ hold, studentId, highlighted, onChanged, onError, onNotice }) {
   const now = useNow(1000);
   const [busy, setBusy] = useState(null);
+  // The card is unmounted when the student id changes. A confirm or cancel that finishes after that
+  // must not show its message to the next student.
+  const mounted = useIsMounted();
 
   const msLeft = remainingMs(hold.expiresAt, now);
   const effectiveStatus = hold.status === 'HELD' && msLeft === 0 ? 'EXPIRED' : hold.status;
@@ -32,12 +36,14 @@ export default function HoldCard({ hold, studentId, highlighted, onChanged, onEr
     try {
       // "Pay admission fee" assumes payment succeeded; no real gateway (per the brief).
       await api.confirmHold(hold.holdId, studentId);
-      onNotice(`Admission confirmed for ${hold.className}.`);
+      if (mounted.current) onNotice(`Admission confirmed for ${hold.className}.`);
     } catch (err) {
-      onError(err);
+      if (mounted.current) onError(err);
     } finally {
-      setBusy(null);
-      onChanged();
+      if (mounted.current) {
+        setBusy(null);
+        onChanged();
+      }
     }
   }
 
@@ -46,12 +52,14 @@ export default function HoldCard({ hold, studentId, highlighted, onChanged, onEr
     setBusy('cancel');
     try {
       await api.cancelHold(hold.holdId, studentId);
-      onNotice(`Application for ${hold.className} cancelled.`);
+      if (mounted.current) onNotice(`Application for ${hold.className} cancelled.`);
     } catch (err) {
-      onError(err);
+      if (mounted.current) onError(err);
     } finally {
-      setBusy(null);
-      onChanged();
+      if (mounted.current) {
+        setBusy(null);
+        onChanged();
+      }
     }
   }
 

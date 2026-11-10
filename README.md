@@ -145,9 +145,14 @@ npm install
 npm test
 ```
 
-Covers the countdown switching to *Expired* and disabling the pay button without reload, the
-class table rendering seat counts and disabling *Apply* when full, and the API client's error
-translation (including the server-unreachable case).
+18 tests cover:
+
+- the countdown switching to *Expired* and disabling the pay button without a reload;
+- the class table showing seat counts and disabling *Apply* when a class is full;
+- the API client's error translation, including the server-unreachable case;
+- messages clearing on tab change and auto-hiding;
+- one student never seeing another student's messages or applications after the id is changed,
+  including when a reply for the old id arrives late.
 
 ## Running without Docker (development)
 

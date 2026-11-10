@@ -7,6 +7,9 @@ import ClassList from './components/ClassList.jsx';
 import MyApplications from './components/MyApplications.jsx';
 import CreateClassForm from './components/CreateClassForm.jsx';
 
+/** Success messages disappear on their own after this long; errors stay until dismissed. */
+export const NOTICE_AUTO_HIDE_MS = 5000;
+
 const TABS = [
   { id: 'classes', label: 'Classes' },
   { id: 'mine', label: 'My applications' },
@@ -32,10 +35,46 @@ export default function App() {
     setError(err?.message ?? String(err));
   }, []);
 
+  // A notice is an object rather than a string so that the same text reported twice still restarts
+  // the auto-hide timer below.
   const reportNotice = useCallback((text) => {
     setError(null);
-    setNotice(text);
+    setNotice({ text, id: Date.now() + Math.random() });
   }, []);
+
+  // Success messages are transient: hide them automatically after a few seconds.
+  useEffect(() => {
+    if (!notice) return undefined;
+    const timer = setTimeout(() => setNotice(null), NOTICE_AUTO_HIDE_MS);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
+  const clearMessages = useCallback(() => {
+    setError(null);
+    setNotice(null);
+  }, []);
+
+  // Messages belong to the screen they were raised on, so switching tabs clears them.
+  const selectTab = useCallback(
+    (nextTab) => {
+      if (nextTab === tab) return;
+      setTab(nextTab);
+      clearMessages();
+    },
+    [tab, clearMessages],
+  );
+
+  // Messages and the highlighted application belong to the student who caused them. When a
+  // different id is entered, nothing from the previous student may remain on screen.
+  const changeStudentId = useCallback(
+    (nextId) => {
+      if (nextId === studentId) return;
+      setStudentId(nextId);
+      clearMessages();
+      setHighlightHoldId(null);
+    },
+    [studentId, clearMessages],
+  );
 
   // After a successful application, jump to "My applications" and highlight the new hold so the
   // countdown and the confirm button are immediately visible.
@@ -54,7 +93,7 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <h1>School Admission</h1>
-        <StudentIdBar value={studentId} onChange={setStudentId} />
+        <StudentIdBar value={studentId} onChange={changeStudentId} />
       </header>
 
       <nav className="tabs" aria-label="Sections">
@@ -63,7 +102,7 @@ export default function App() {
             key={t.id}
             type="button"
             className={tab === t.id ? 'tab active' : 'tab'}
-            onClick={() => setTab(t.id)}
+            onClick={() => selectTab(t.id)}
             aria-current={tab === t.id ? 'page' : undefined}
           >
             {t.label}
@@ -74,7 +113,7 @@ export default function App() {
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
       {notice && (
         <div className="notice" role="status">
-          {notice}
+          {notice.text}
           <button type="button" className="link" onClick={() => setNotice(null)} aria-label="Dismiss message">
             ×
           </button>
@@ -91,6 +130,10 @@ export default function App() {
         )}
         {tab === 'mine' && (
           <MyApplications
+            // A new key per student gives every student a fresh component: the previous student's
+            // list is discarded immediately and any of their requests still in flight cannot
+            // update the screen when they finish.
+            key={studentIdValid ? studentId : 'no-student'}
             studentId={studentIdValid ? studentId : ''}
             highlightHoldId={highlightHoldId}
             onError={reportError}

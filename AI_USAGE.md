@@ -88,6 +88,29 @@ automated verification at every step.
     plain grep treated the alternation literally and reported every response as "other" even
     though the real numbers (5 accepted, 55 rejected, both instances agreeing) were correct.
     Spotted by reading the printed counts against the FAIL verdict; fixed with `grep -E`.
+- 2026-11-10 — Manual testing and fixes. I tested the whole app the way an evaluator would, from a
+  fresh clone with only Docker, and found two usability problems that the automated tests had not
+  covered:
+  - a success message stayed visible on every tab, and stayed after it was no longer relevant;
+  - after typing a different student id, the previous student's message was still on screen.
+  While analysing the second report, Claude found a related race: pasting a new id briefly showed
+  the previous student's application list, and a slow reply for the old id could overwrite the
+  new student's list. All three were fixed. Messages now clear on tab change and on id change,
+  success messages auto-hide, and the application list is rebuilt for each student so late
+  replies are ignored. Five frontend tests cover this. Each one was first confirmed to fail on the
+  unfixed code.
+  - *Mistake caught:* the first version of the new test file never rendered the app, so every test
+    failed with "label not found". Caught on the first run.
+  - *Environment issue caught:* the tests crashed reading `localStorage` because Node 26 defines
+    its own experimental `localStorage` global, which hides the test environment's. The test setup
+    now supplies an in-memory storage when the built-in one is unusable, so `npm test` works on any
+    Node version.
+  - *Flaky test caught:* one run in five failed because Testing Library waits only 1 s for elements
+    by default, which a busy machine exceeded. The wait was raised to 5 s and the suite then
+    passed four runs in a row.
+  - Two other observations from testing were deliberately left unchanged and documented instead:
+    the admin tab is visible to everyone, and a student can apply to several classes
+    (ASSUMPTIONS items 29 and 30).
 - 2026-11-09 — Frontend (Phase 4). I have no prior React/Vite experience, so Claude wrote the
   React components, hooks and Vitest tests and explained each piece. Decisions I made and asked
   for: plain JavaScript instead of TypeScript, React 18.3, polling instead of WebSockets, runtime

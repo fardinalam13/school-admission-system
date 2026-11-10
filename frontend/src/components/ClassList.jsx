@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { api } from '../api.js';
 import { SEAT_REFRESH_MS } from '../config.js';
 import { usePolling } from '../hooks/usePolling.js';
@@ -11,13 +11,19 @@ export default function ClassList({ studentId, onApplied, onError }) {
   const { data: classes, error, loading, refresh } = usePolling(api.listClasses, SEAT_REFRESH_MS);
   const [applyingId, setApplyingId] = useState(null);
 
+  // Always holds the id currently entered at the top of the page, so a reply that arrives after
+  // the id was changed can be recognised as belonging to the previous student.
+  const currentStudentId = useRef(studentId);
+  currentStudentId.current = studentId;
+
   async function apply(cls) {
+    const requestedFor = studentId;
     setApplyingId(cls.id);
     try {
-      const hold = await api.createHold(cls.id, studentId);
-      onApplied(hold);
+      const hold = await api.createHold(cls.id, requestedFor);
+      if (currentStudentId.current === requestedFor) onApplied(hold);
     } catch (err) {
-      onError(err);
+      if (currentStudentId.current === requestedFor) onError(err);
     } finally {
       setApplyingId(null);
       refresh();

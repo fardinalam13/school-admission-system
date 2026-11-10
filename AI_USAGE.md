@@ -4,9 +4,9 @@ Running log of where AI tooling was used, what it got wrong, and how the mistake
 
 ## Tool
 
-Claude Code (Anthropic), used inside VS Code, in a conversational pair-programming style: I set
+Claude Code, used inside VS Code, in a conversational pair-programming style: I set
 the requirements and the design direction, reviewed every file and every test assertion against
-the numbered rules in the brief, and ran the verification steps; Claude wrote most of the code.
+the numbered rules in the brief, and ran the verification steps; Claude wrote most of the frontend code.
 
 ## Where it was used
 

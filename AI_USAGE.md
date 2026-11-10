@@ -13,9 +13,9 @@ the numbered rules in the brief, and ran the verification steps; Claude wrote mo
 | Area | AI involvement | My involvement |
 |---|---|---|
 | Reading the brief, listing rules and ambiguities, phased plan | Drafted | Reviewed, chose the stack and the concurrency approach |
-| Backend (ASP.NET Core, EF Core, migrations, services, controllers) | Wrote the code | Reviewed design, decided assumptions (cancel semantics, id format, status codes) |
+| Backend (ASP.NET Core, EF Core, migrations, services, controllers) | Wrote most of the codes along with me | Reviewed design, decided assumptions (cancel semantics, id format, status codes) |
 | Backend tests (xUnit, Testcontainers, fake clock) | Wrote the tests | Checked each assertion maps to a rule in the brief |
-| Frontend (React, Vite, components, Vitest) | Wrote the code and explained React concepts | No prior React experience; decided JS over TS, React 18, polling over WebSockets |
+| Frontend (React, Vite, components, Vitest) | Wrote the code and explained React concepts | As I had no prior React experience; decided JS over TS, React 18, polling over WebSockets |
 | Docker, compose, nginx runtime config | Wrote the files | Ran every `docker compose` verification and the browser click-through |
 | README / ASSUMPTIONS / AI_USAGE | Drafted | Edited for accuracy; every assumption is a decision I agreed to |
 
